@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, MapPin, Droplet, User, Loader2, Calendar, Phone, CheckCircle2, AlertCircle, Building2, LandPlot } from 'lucide-react';
+import { Search, MapPin, Droplet, User, Loader2, Calendar, Phone, CheckCircle2, AlertCircle, LandPlot } from 'lucide-react';
 import Button from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,8 +10,7 @@ const SearchDonor = () => {
     const [formData, setFormData] = useState({
         bloodGroup: '',
         state: '',
-        district: '',
-        city: ''
+        district: ''
     });
 
     const [states, setStates] = useState([]);
@@ -102,16 +101,6 @@ const SearchDonor = () => {
                 // 3. District Match
                 if (donor.district !== formData.district) return false;
 
-                // 4. City Match (Optional)
-                if (formData.city) {
-                    // Check if donor has city
-                    if (!donor.city) return false;
-                    // Fuzzy match
-                    if (!donor.city.toLowerCase().includes(formData.city.toLowerCase())) {
-                        return false;
-                    }
-                }
-
                 return true;
             });
 
@@ -145,7 +134,7 @@ const SearchDonor = () => {
                         <div className="p-1 h-2 bg-linear-to-r from-emerald-500 via-teal-500 to-emerald-500 animate-gradient"></div>
 
                         <CardContent className="p-8 md:p-10">
-                            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 
                                 {/* Blood Group */}
                                 <div className="space-y-2">
@@ -218,21 +207,7 @@ const SearchDonor = () => {
                                     {errors.district && <p className="text-xs text-red-500 ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.district}</p>}
                                 </div>
 
-                                {/* City (Input - Optional) */}
-                                <div className="space-y-2">
-                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">City <span className="text-gray-400 font-normal text-xs">(Optional)</span></label>
-                                    <div className="relative group">
-                                        <Building2 className="absolute left-4 top-3.5 h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
-                                        <input
-                                            type="text"
-                                            name="city"
-                                            value={formData.city}
-                                            onChange={handleChange}
-                                            placeholder="Enter city"
-                                            className="w-full h-12 pl-12 pr-4 rounded-xl border-2 border-gray-100 dark:border-teal-900/30 bg-gray-50 dark:bg-[#0F1C1A] outline-none focus:border-emerald-500 dark:focus:border-teal-500 text-gray-900 dark:text-gray-100 transition-all font-medium placeholder:text-gray-400"
-                                        />
-                                    </div>
-                                </div>
+
                             </form>
 
                             <div className="mt-10 flex justify-center">
