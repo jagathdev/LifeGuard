@@ -22,9 +22,9 @@ const Navbar = () => {
 
     const navLinks = [
         { name: 'Home', path: '/' },
-        { name: 'Search Donor', path: '/search' },
+        { name: 'Find Donor', path: '/search' },
         { name: 'Become Donor', path: '/register' },
-        { name: 'Emergency', path: '/emergency' },
+        { name: 'Emergency Requests', path: '/emergency' },
         { name: 'About', path: '/about' },
     ];
 
@@ -38,13 +38,13 @@ const Navbar = () => {
             className={cn(
                 "fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out px-4 md:px-6 py-3",
                 scrolled
-                    ? "bg-[var(--color-mint-white)]/90 dark:bg-[var(--color-deep-midnight)]/90 backdrop-blur-md shadow-md py-2"
+                    ? "bg-mint-white/90 dark:bg-deep-midnight/90 backdrop-blur-md shadow-md py-2"
                     : "bg-transparent py-4"
             )}
         >
             <div className={cn(
                 "container mx-auto rounded-2xl px-4 transition-all duration-300",
-                scrolled ? "" : "bg-[var(--color-mint-white)]/80 dark:bg-[var(--color-deep-midnight)]/80 backdrop-blur-sm shadow-sm p-2"
+                scrolled ? "" : "bg-mint-white/80 dark:bg-deep-midnight/80 backdrop-blur-sm shadow-sm p-2"
             )}>
                 <div className="flex items-center justify-between h-12">
                     {/* Left: Logo */}
@@ -53,7 +53,7 @@ const Navbar = () => {
                             <Droplet className="h-5 w-5 text-emerald-500 fill-emerald-500" />
                         </div>
                         <span className="text-lg font-bold tracking-tight text-emerald-900 dark:text-emerald-50">
-                            BloodLink
+                            LifeGuard
                         </span>
                     </Link>
 
@@ -134,7 +134,7 @@ const Navbar = () => {
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="md:hidden mt-2 mx-4 rounded-xl overflow-hidden bg-[var(--color-mint-white)] dark:bg-[var(--color-deep-midnight)] shadow-lg border border-emerald-100 dark:border-emerald-900/50"
+                        className="md:hidden mt-2 mx-4 rounded-xl overflow-hidden bg-mint-white dark:bg-deep-midnight shadow-lg border border-emerald-100 dark:border-emerald-900/50"
                     >
                         <div className="flex flex-col space-y-2 p-4">
                             {navLinks.map((link) => (

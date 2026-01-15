@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Phone, Lock, Check, X, Shield, Calendar, CheckCircle2, MapPin, Droplet, LayoutGrid, Chrome } from 'lucide-react';
+import { User, Mail, Phone, Lock, Check, X, Shield, Calendar, CheckCircle2, MapPin, Droplet, Building2, LandPlot } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { getStates, getDistrictsByState } from '../../lib/DistrictCityService';
 
 // Custom Floating Label Input Component
 const FloatingInput = ({ label, icon: Icon, error, className, ...props }) => {
@@ -46,11 +47,18 @@ const BecomeDonorForm = () => {
         phone: '',
         bloodGroup: '',
         lastDonationDate: '',
-        address: '',
+        state: '',
+        district: '',
+        city: '',
         password: '',
         confirmPassword: '',
         agreeToTerms: false
     });
+
+    const [states, setStates] = useState([]);
+    const [districts, setDistricts] = useState([]);
+    const [loadingStates, setLoadingStates] = useState(true);
+    const [loadingDistricts, setLoadingDistricts] = useState(false);
 
     const [errors, setErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,17 +66,44 @@ const BecomeDonorForm = () => {
     const [showLegalModal, setShowLegalModal] = useState(false);
     const [donorId, setDonorId] = useState('');
 
+    // Load States on Mount
+    useEffect(() => {
+        const loadStates = async () => {
+            const data = await getStates();
+            setStates(data);
+            setLoadingStates(false);
+        };
+        loadStates();
+    }, []);
+
+    // Load Districts when State changes
+    useEffect(() => {
+        if (formData.state) {
+            setLoadingDistricts(true);
+            const loadDistricts = async () => {
+                const data = await getDistrictsByState(formData.state);
+                setDistricts(data);
+                setLoadingDistricts(false);
+            };
+            loadDistricts();
+        } else {
+            setDistricts([]);
+        }
+    }, [formData.state]);
+
     const validate = () => {
         const newErrors = {};
         if (!formData.fullName.trim()) newErrors.fullName = "Full Name is required";
         if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = "Invalid Email Address";
         if (!/^\d{10}$/.test(formData.phone)) newErrors.phone = "Phone must be 10 digits";
         if (!formData.bloodGroup) newErrors.bloodGroup = "Select a Blood Group";
-        if (!formData.address.trim()) newErrors.address = "Address is required";
+        if (!formData.state) newErrors.state = "State is required";
+        if (!formData.district) newErrors.district = "District is required";
+        if (!formData.city.trim()) newErrors.city = "City is required";
         if (formData.password.length < 6) newErrors.password = "Min 6 characters required";
         if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = "Passwords do not match";
 
-        // Date is optional, but if provided, check logic if needed. 
+        // Date is optional, but if provided, check logic
         if (formData.lastDonationDate) {
             if (new Date(formData.lastDonationDate) > new Date()) {
                 newErrors.lastDonationDate = "Date cannot be in the future";
@@ -104,12 +139,13 @@ const BecomeDonorForm = () => {
         const generatedId = `DNR-${Math.floor(1000 + Math.random() * 9000)}`;
         setDonorId(generatedId);
 
-        // Save Data
+        // Save Data excluding passwords and terms
+        const { password, confirmPassword, agreeToTerms, ...donorData } = formData;
         const existingDonors = JSON.parse(localStorage.getItem('donors') || '[]');
         const newDonor = {
             id: Date.now(),
             donorId: generatedId,
-            ...formData,
+            ...donorData,
             registeredAt: new Date().toISOString()
         };
         localStorage.setItem('donors', JSON.stringify([...existingDonors, newDonor]));
@@ -173,45 +209,88 @@ const BecomeDonorForm = () => {
                             </div>
                         </div>
 
-                        {/* Last Donation Date */}
-                        <div className="relative">
-                            <input
-                                type="date"
-                                name="lastDonationDate"
-                                value={formData.lastDonationDate}
-                                onChange={handleChange}
-                                className="peer w-full h-14 pl-12 pr-4 rounded-xl border-2 border-gray-200 dark:border-teal-900/50 bg-transparent text-gray-900 dark:text-white focus:border-emerald-500 outline-none transition-all placeholder-transparent"
-                            />
-                            <label className="absolute left-12 -top-2.5 text-xs bg-white dark:bg-[#0A1210] px-2 text-emerald-600">
-                                Last Blood Donation Date (Optional)
-                            </label>
-                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 peer-focus:text-emerald-600" />
-                            {errors.lastDonationDate && <p className="text-xs text-red-500 mt-1 ml-1 font-medium">{errors.lastDonationDate}</p>}
+                        {/* State & District */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* State Dropdown */}
+                            <div className="relative">
+                                <div className="relative">
+                                    <select
+                                        name="state"
+                                        value={formData.state}
+                                        onChange={(e) => {
+                                            handleChange(e);
+                                            setFormData(prev => ({ ...prev, district: '' })); // Reset district on state change
+                                        }}
+                                        disabled={loadingStates}
+                                        className={`peer w-full h-14 pl-12 pr-4 rounded-xl border-2 bg-transparent transition-all outline-none appearance-none cursor-pointer disabled:opacity-50
+                                            ${errors.state
+                                                ? 'border-red-500 text-red-900 dark:text-red-100'
+                                                : 'border-gray-200 dark:border-teal-900/50 text-gray-900 dark:text-white focus:border-emerald-500'
+                                            }
+                                        `}
+                                    >
+                                        <option value="" disabled hidden></option>
+                                        {states.map(state => <option key={state} value={state} className="text-black">{state}</option>)}
+                                    </select>
+                                    <label className="absolute left-12 top-[18px] text-gray-500 dark:text-gray-400 text-base transition-all duration-200 pointer-events-none
+                                        peer-focus:-top-2.5 peer-focus:text-xs peer-focus:bg-white peer-focus:dark:bg-[#0A1210] peer-focus:px-2 peer-focus:text-emerald-600
+                                        peer-[:not([value=''])]:-top-2.5 peer-[:not([value=''])]::text-xs peer-[:not([value=''])]::bg-white peer-[:not([value=''])]::dark:bg-[#0A1210] peer-[:not([value=''])]::px-2
+                                    ">
+                                        {loadingStates ? 'Loading States...' : 'State'}
+                                    </label>
+                                    <LandPlot className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${errors.state ? 'text-red-500' : 'text-gray-400 peer-focus:text-emerald-600'}`} />
+                                </div>
+                                {errors.state && <p className="text-xs text-red-500 mt-1 ml-1 font-medium">{errors.state}</p>}
+                            </div>
+
+                            {/* District Dropdown */}
+                            <div className="relative">
+                                <div className="relative">
+                                    <select
+                                        name="district"
+                                        value={formData.district}
+                                        onChange={handleChange}
+                                        disabled={!formData.state || loadingDistricts}
+                                        className={`peer w-full h-14 pl-12 pr-4 rounded-xl border-2 bg-transparent transition-all outline-none appearance-none cursor-pointer disabled:opacity-50
+                                            ${errors.district
+                                                ? 'border-red-500 text-red-900 dark:text-red-100'
+                                                : 'border-gray-200 dark:border-teal-900/50 text-gray-900 dark:text-white focus:border-emerald-500'
+                                            }
+                                        `}
+                                    >
+                                        <option value="" disabled hidden></option>
+                                        {districts.map(dist => <option key={dist} value={dist} className="text-black">{dist}</option>)}
+                                    </select>
+                                    <label className="absolute left-12 top-[18px] text-gray-500 dark:text-gray-400 text-base transition-all duration-200 pointer-events-none
+                                        peer-focus:-top-2.5 peer-focus:text-xs peer-focus:bg-white peer-focus:dark:bg-[#0A1210] peer-focus:px-2 peer-focus:text-emerald-600
+                                        peer-[:not([value=''])]:-top-2.5 peer-[:not([value=''])]::text-xs peer-[:not([value=''])]::bg-white peer-[:not([value=''])]::dark:bg-[#0A1210] peer-[:not([value=''])]::px-2
+                                    ">
+                                        {loadingDistricts ? 'Loading...' : 'District'}
+                                    </label>
+                                    <MapPin className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${errors.district ? 'text-red-500' : 'text-gray-400 peer-focus:text-emerald-600'}`} />
+                                </div>
+                                {errors.district && <p className="text-xs text-red-500 mt-1 ml-1 font-medium">{errors.district}</p>}
+                            </div>
                         </div>
 
-                        {/* Address */}
-                        <div className="relative">
-                            <textarea
-                                name="address"
-                                value={formData.address}
-                                onChange={handleChange}
-                                placeholder=" "
-                                className={`peer w-full h-32 pl-12 pr-4 py-4 rounded-xl border-2 bg-transparent transition-all outline-none resize-none
-                                    ${errors.address
-                                        ? 'border-red-500 focus:border-red-500'
-                                        : 'border-gray-200 dark:border-teal-900/50 text-gray-900 dark:text-white focus:border-emerald-500'
-                                    }
-                                `}
-                            />
-                            <label className={`absolute left-12 top-[18px] text-gray-500 dark:text-gray-400 text-base transition-all duration-200 pointer-events-none
-                                peer-placeholder-shown:text-base peer-placeholder-shown:top-[18px]
-                                peer-focus:-top-2.5 peer-focus:text-xs peer-focus:bg-white peer-focus:dark:bg-[#0A1210] peer-focus:px-2 peer-focus:text-emerald-600
-                                peer-[:not(:placeholder-shown)]:-top-2.5 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:bg-white peer-[:not(:placeholder-shown)]:dark:bg-[#0A1210] peer-[:not(:placeholder-shown)]:px-2
-                            `}>
-                                Full Address
-                            </label>
-                            <MapPin className={`absolute left-4 top-6 w-5 h-5 ${errors.address ? 'text-red-500' : 'text-gray-400 peer-focus:text-emerald-600'}`} />
-                            {errors.address && <p className="text-xs text-red-500 mt-1 ml-1 font-medium">{errors.address}</p>}
+                        {/* City & Last Donation Date */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <FloatingInput name="city" label="City" icon={Building2} value={formData.city} onChange={handleChange} error={errors.city} />
+
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    name="lastDonationDate"
+                                    value={formData.lastDonationDate}
+                                    onChange={handleChange}
+                                    className="peer w-full h-14 pl-12 pr-4 rounded-xl border-2 border-gray-200 dark:border-teal-900/50 bg-transparent text-gray-900 dark:text-white focus:border-emerald-500 outline-none transition-all placeholder-transparent"
+                                />
+                                <label className="absolute left-12 -top-2.5 text-xs bg-white dark:bg-[#0A1210] px-2 text-emerald-600">
+                                    Last Donation Date (Optional)
+                                </label>
+                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 peer-focus:text-emerald-600" />
+                                {errors.lastDonationDate && <p className="text-xs text-red-500 mt-1 ml-1 font-medium">{errors.lastDonationDate}</p>}
+                            </div>
                         </div>
 
                         {/* Passwords */}
@@ -263,7 +342,7 @@ const BecomeDonorForm = () => {
                 </div>
             </div>
 
-            {/* Terms Modal */}
+            {/* Terms Modal - Same as before */}
             <AnimatePresence>
                 {showLegalModal && (
                     <motion.div
