@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Droplet, MapPin, Phone, Clock, AlertTriangle, Hospital, User } from 'lucide-react';
+import { LogOut, Droplet, MapPin, Phone, Clock, AlertTriangle, Hospital, User, CheckCircle2, XCircle } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 
@@ -10,21 +10,30 @@ const DonorDashboard = () => {
     const [currentUser, setCurrentUser] = useState(null);
     const [matchingRequests, setMatchingRequests] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showSkipModal, setShowSkipModal] = useState(false);
 
     useEffect(() => {
-        // 1. Get User
-        const user = JSON.parse(localStorage.getItem('currentUser'));
+        // 1. Get User from 'loggedInDonor'
+        const user = JSON.parse(localStorage.getItem('loggedInDonor'));
         if (!user) {
             navigate('/login');
             return;
         }
         setCurrentUser(user);
 
-        // 2. Initial Load of Requests
+        // 2. Load Requests
         const loadRequests = () => {
             const allRequests = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
-            // Filter logic: matches blood group exactly
-            const filtered = allRequests.filter(req => req.bloodGroup === user.bloodGroup);
+            const skippedRequests = JSON.parse(localStorage.getItem('donorSkippedRequests') || '[]');
+            const mySkippedIds = skippedRequests.filter(s => s.donorId === user.id).map(s => s.requestId);
+
+            // Filter logic: matches blood group exactly AND not skipped
+            const filtered = allRequests.filter(req =>
+                req.bloodGroup === user.bloodGroup &&
+                !mySkippedIds.includes(req.id)
+            );
+
             setMatchingRequests(filtered);
             setLoading(false);
         };
@@ -32,15 +41,51 @@ const DonorDashboard = () => {
         loadRequests();
 
         // 3. Real-time Listener (simulated via interval for localStorage polling)
-        // Since localStorage events only trigger across tabs, we'll use a polling interval for single-tab testing user feedback.
         const interval = setInterval(loadRequests, 3000);
 
         return () => clearInterval(interval);
     }, [navigate]);
 
     const handleLogout = () => {
-        localStorage.removeItem('currentUser');
+        localStorage.removeItem('loggedInDonor');
         navigate('/login');
+    };
+
+    const handleDonated = (request) => {
+        // 1. Remove from Global Requests (Assuming "I Have Donated" means fulfilling it)
+        const allRequests = JSON.parse(localStorage.getItem('emergencyRequests') || '[]');
+        const updatedRequests = allRequests.filter(r => r.id !== request.id);
+        localStorage.setItem('emergencyRequests', JSON.stringify(updatedRequests));
+
+        // 2. Add to History
+        const history = JSON.parse(localStorage.getItem('donorHistory') || '[]');
+        history.push({
+            donorId: currentUser.id,
+            requestId: request.id,
+            patientName: request.patientName,
+            donatedAt: new Date().toISOString()
+        });
+        localStorage.setItem('donorHistory', JSON.stringify(history));
+
+        // 3. Update Local State immediately
+        setMatchingRequests(prev => prev.filter(r => r.id !== request.id));
+        setShowSuccessModal(true);
+    };
+
+    const handleSkip = (request) => {
+        // 1. Add to Skipped
+        const skipped = JSON.parse(localStorage.getItem('donorSkippedRequests') || '[]');
+        skipped.push({
+            donorId: currentUser.id,
+            requestId: request.id,
+            skippedAt: new Date().toISOString()
+        });
+        localStorage.setItem('donorSkippedRequests', JSON.stringify(skipped));
+
+        // 2. Update Local State
+        setMatchingRequests(prev => prev.filter(r => r.id !== request.id));
+        setShowSkipModal(true);
+        setTimeout(() => setShowSkipModal(false), 3000);
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#020A08] text-emerald-600">Loading...</div>;
@@ -56,10 +101,10 @@ const DonorDashboard = () => {
                             <span className="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-full">
                                 <User className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
                             </span>
-                            Welcome, {currentUser?.fullName}
+                            Welcome, {currentUser?.name || currentUser?.fullName}
                         </h1>
                         <p className="text-gray-500 dark:text-gray-400 mt-2 ml-16">
-                            You are a <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">{currentUser?.bloodGroup}</span> Donor.
+                            You are a <span className="font-bold text-emerald-600 dark:text-emerald-400 text-lg">{currentUser?.bloodGroup}</span> Donor in {currentUser?.district}.
                         </p>
                     </div>
                     <Button onClick={handleLogout} variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 dark:border-red-900/50 dark:hover:bg-red-900/20">
@@ -128,6 +173,22 @@ const DonorDashboard = () => {
                                                 <Button className={`w-full gap-2 ${req.urgent ? 'bg-red-600 hover:bg-red-700 shadow-md shadow-red-500/20' : 'bg-emerald-600 hover:bg-emerald-700'} text-white border-0 mt-2`}>
                                                     <Phone className="w-4 h-4" /> Call: {req.contact}
                                                 </Button>
+
+                                                <div className="grid grid-cols-2 gap-3 mt-3">
+                                                    <Button
+                                                        onClick={() => handleDonated(req)}
+                                                        className="bg-emerald-600 hover:bg-emerald-700 text-white border-0 text-sm py-2 h-auto"
+                                                    >
+                                                        I Have Donated
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => handleSkip(req)}
+                                                        variant="outline"
+                                                        className="border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 text-sm py-2 h-auto"
+                                                    >
+                                                        Not Available
+                                                    </Button>
+                                                </div>
                                             </CardContent>
                                         </Card>
                                     </motion.div>
@@ -137,6 +198,53 @@ const DonorDashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* Success Modal */}
+            <AnimatePresence>
+                {showSuccessModal && (
+                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            onClick={() => setShowSuccessModal(false)}
+                        ></motion.div>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            className="bg-white dark:bg-[#0A1815] w-full max-w-sm rounded-2xl shadow-2xl relative z-10 p-8 text-center border border-emerald-500/20"
+                        >
+                            <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <CheckCircle2 className="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Thank You, Hero!</h2>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                You have successfully completed this donation.
+                            </p>
+                            <Button onClick={() => setShowSuccessModal(false)} className="w-full bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/30">
+                                Close
+                            </Button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Skip Modal (Toast) */}
+            <AnimatePresence>
+                {showSkipModal && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 50 }}
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[70] bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-full shadow-xl flex items-center gap-3"
+                    >
+                        <XCircle className="w-5 h-5" />
+                        <span className="font-medium">Request skipped.</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

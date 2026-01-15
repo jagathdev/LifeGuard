@@ -136,16 +136,18 @@ const BecomeDonorForm = () => {
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         // Generate Donor ID
-        const generatedId = `DNR-${Math.floor(1000 + Math.random() * 9000)}`;
+        const generatedId = `DONOR${Math.floor(10000 + Math.random() * 90000)}`;
         setDonorId(generatedId);
 
         // Save Data excluding passwords and terms
-        const { password, confirmPassword, agreeToTerms, ...donorData } = formData;
+        const { password, confirmPassword, agreeToTerms, fullName, lastDonationDate, ...rest } = formData;
         const existingDonors = JSON.parse(localStorage.getItem('donors') || '[]');
         const newDonor = {
-            id: Date.now(),
-            donorId: generatedId,
-            ...donorData,
+            id: generatedId,
+            name: fullName,
+            password: password, // As per requirement, though usually hashed
+            lastDonation: lastDonationDate,
+            ...rest,
             registeredAt: new Date().toISOString()
         };
         localStorage.setItem('donors', JSON.stringify([...existingDonors, newDonor]));

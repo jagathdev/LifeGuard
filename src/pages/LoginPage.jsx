@@ -10,6 +10,7 @@ const LoginPage = () => {
     const navigate = useNavigate();
     const [credentials, setCredentials] = useState({ identifier: '', password: '' });
     const [error, setError] = useState('');
+    const [showSuccess, setShowSuccess] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const handleChange = (e) => {
@@ -20,6 +21,13 @@ const LoginPage = () => {
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
+
+        // 1. Explicit Empty Field Validation
+        if (!credentials.identifier.trim() || !credentials.password.trim()) {
+            setError('Please fill in all fields');
+            return;
+        }
+
         setIsLoading(true);
 
         // Simulate API delay
@@ -33,10 +41,19 @@ const LoginPage = () => {
         );
 
         if (user) {
-            localStorage.setItem('currentUser', JSON.stringify(user));
-            navigate('/donor-dashboard');
+            localStorage.setItem('loggedInDonor', JSON.stringify(user));
+            setShowSuccess(true);
+            setTimeout(() => {
+                navigate('/donor-dashboard');
+            }, 1500);
         } else {
-            setError('Invalid email/mobile number or password.');
+            const userExists = donors.some(d => d.email === identifier || d.phone === identifier);
+
+            if (userExists) {
+                setError('Invalid login details');
+            } else {
+                setError('Account not found. Please register as a donor.');
+            }
             setIsLoading(false);
         }
     };
@@ -78,6 +95,16 @@ const LoginPage = () => {
                                         <AlertCircle className="w-4 h-4" /> {error}
                                     </motion.div>
                                 )}
+                                {showSuccess && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 p-3 rounded-lg text-sm flex items-center gap-2 font-medium"
+                                    >
+                                        <Loader2 className="w-4 h-4 animate-spin" /> Login successful. Welcome back!
+                                    </motion.div>
+                                )}
                             </AnimatePresence>
 
                             <Input
@@ -109,11 +136,11 @@ const LoginPage = () => {
 
                             <Button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isLoading || showSuccess}
                                 className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/30"
                                 size="lg"
                             >
-                                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
+                                {isLoading || showSuccess ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Sign In'}
                             </Button>
                         </form>
                     </CardContent>

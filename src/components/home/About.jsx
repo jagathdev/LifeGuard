@@ -1,6 +1,7 @@
 import Button from '../ui/Button';
 import { motion } from 'framer-motion';
 import { CheckCircle2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const About = () => {
     return (
@@ -52,10 +53,11 @@ const About = () => {
                                 </li>
                             ))}
                         </ul>
-
-                        <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/30">
-                            Learn More About Us
-                        </Button>
+                        <Link to="/about">
+                            <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-500/30">
+                                Learn More About Us
+                            </Button>
+                        </Link>
                     </motion.div>
                 </div>
             </div>

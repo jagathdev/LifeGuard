@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import Button from '../ui/Button';
 import { motion } from 'framer-motion';
 import { Search, Heart } from 'lucide-react';
+import bloodDonate from '../../assets/images/bloodDonate.png';
 
 const Hero = () => {
     return (
@@ -65,26 +66,7 @@ const Hero = () => {
                             </Link>
                         </div>
 
-                        <div className="mt-12 flex items-center justify-center lg:justify-start gap-6">
-                            <div className="flex -space-x-4">
-                                {[1, 2, 3, 4].map((i) => (
-                                    <div key={i} className="w-12 h-12 rounded-full border-4 border-white dark:border-gray-900 overflow-hidden bg-gray-200">
-                                        <img
-                                            src={`https://i.pravatar.cc/100?img=${i + 15}`}
-                                            alt="Donor"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
-                                ))}
-                                <div className="w-12 h-12 rounded-full border-4 border-white dark:border-gray-900 bg-emerald-100 dark:bg-emerald-900 flex items-center justify-center text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                                    +2k
-                                </div>
-                            </div>
-                            <div className="text-left">
-                                <p className="font-bold text-lg text-gray-900 dark:text-white">Join 12,000+</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Donors worldwide</p>
-                            </div>
-                        </div>
+
                     </motion.div>
 
                     {/* Right Column: Illustration */}
@@ -97,7 +79,7 @@ const Hero = () => {
                         <div className="relative z-10 w-full aspect-square max-w-lg mx-auto">
                             <div className="absolute inset-0 bg-gradient-to-tr from-emerald-200 to-teal-200 dark:from-emerald-900/40 dark:to-teal-900/40 rounded-[2rem] rotate-3 transform transition-transform hover:rotate-2 duration-500"></div>
                             <img
-                                src="https://images.unsplash.com/photo-1615461167524-ad60d12a1497?q=80&w=2000&auto=format&fit=crop"
+                                src={bloodDonate}
                                 alt="Blood Donation Illustration"
                                 className="relative w-full h-full object-cover rounded-[2rem] shadow-2xl shadow-emerald-900/20 dark:shadow-black/50"
                             />
