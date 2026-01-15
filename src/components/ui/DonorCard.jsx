@@ -33,7 +33,7 @@ const DonorCard = ({ donor }) => {
                         </div>
                         <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 gap-2">
                             <Phone className="w-3.5 h-3.5 text-emerald-500" />
-                            <span>+1-XXX-XXX-{donor.phone.slice(-4)}</span>
+                            <span>+91-XXX-XXX-{donor.phone.slice(-4)}</span>
                         </div>
                     </div>
                 </div>

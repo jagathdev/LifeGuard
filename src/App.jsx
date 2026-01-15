@@ -3,8 +3,6 @@ import { ThemeProvider } from './context/ThemeContext';
 import Layout from './components/layout/Layout';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-// Wrapper pages for specific sections to act as standalone pages
 import SearchDonor from './components/home/SearchDonor';
 import BecomeDonorForm from './components/home/BecomeDonorForm';
 import EmergencyRequests from './components/home/EmergencyRequests';
@@ -20,11 +18,12 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="login" element={<LoginPage />} />
-            <Route path="register" element={<RegisterPage />} />
+            <Route path="register" element={<BecomeDonorForm />} />
             <Route path="search" element={<div className="pt-20"><SearchDonor /></div>} />
             <Route path="donate" element={<div className="pt-20"><BecomeDonorForm /></div>} />
             <Route path="emergency" element={<div className="pt-20"><EmergencyRequests /></div>} />
             <Route path="about" element={<AboutPage />} />
+
             <Route path="donor-dashboard" element={<DonorDashboard />} />
           </Route>
         </Routes>
