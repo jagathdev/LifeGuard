@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Droplet, Facebook, Twitter, Instagram, Mail, Phone, MapPin, Linkedin } from 'lucide-react';
+import { Droplet, Facebook, Instagram, Mail, Phone, MapPin, Linkedin, Link } from 'lucide-react';
 import Modal from '../ui/Modal';
 
 const FOOTER_CONTENT = {
@@ -200,16 +200,14 @@ const Footer = () => {
                                 Connecting donors with those in need. Every drop counts, every life matters. Join our mission to create a world where no one waits for blood.
                             </p>
                             <div className="flex space-x-4">
-                                <a href="#" className="p-2 bg-gray-100 dark:bg-emerald-900/20 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-gray-600 dark:text-emerald-300 hover:text-emerald-600 transition-colors">
+                                <a href="https://www.facebook.com/blooddonorsinChennai/" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-100 dark:bg-emerald-900/20 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-gray-600 dark:text-emerald-300 hover:text-emerald-600 transition-colors">
                                     <Facebook className="h-5 w-5" />
                                 </a>
-                                <a href="#" className="p-2 bg-gray-100 dark:bg-emerald-900/20 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-gray-600 dark:text-emerald-300 hover:text-emerald-600 transition-colors">
-                                    <Twitter className="h-5 w-5" />
-                                </a>
-                                <a href="#" className="p-2 bg-gray-100 dark:bg-emerald-900/20 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-gray-600 dark:text-emerald-300 hover:text-emerald-600 transition-colors">
+
+                                <a href="https://www.instagram.com/bloodconnectorg/?hl=en" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-100 dark:bg-emerald-900/20 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-gray-600 dark:text-emerald-300 hover:text-emerald-600 transition-colors">
                                     <Instagram className="h-5 w-5" />
                                 </a>
-                                <a href="#" className="p-2 bg-gray-100 dark:bg-emerald-900/20 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-gray-600 dark:text-emerald-300 hover:text-emerald-600 transition-colors">
+                                <a href="https://www.linkedin.com/in/jagathdevloper/" target="_blank" rel="noopener noreferrer" className="p-2 bg-gray-100 dark:bg-emerald-900/20 rounded-full hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-gray-600 dark:text-emerald-300 hover:text-emerald-600 transition-colors">
                                     <Linkedin className="h-5 w-5" />
                                 </a>
                             </div>

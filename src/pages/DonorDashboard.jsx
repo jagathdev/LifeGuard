@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Droplet, MapPin, Phone, Clock, AlertTriangle, Hospital, User, CheckCircle2, XCircle } from 'lucide-react';
+import { LogOut, Droplet, MapPin, Phone, Clock, AlertTriangle, Hospital, User, CheckCircle2, XCircle, Calendar } from 'lucide-react';
 import Button from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
 
@@ -9,6 +9,7 @@ const DonorDashboard = () => {
     const navigate = useNavigate();
     const [currentUser, setCurrentUser] = useState(null);
     const [matchingRequests, setMatchingRequests] = useState([]);
+    const [upcomingReminders, setUpcomingReminders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showSkipModal, setShowSkipModal] = useState(false);
@@ -39,6 +40,35 @@ const DonorDashboard = () => {
         };
 
         loadRequests();
+
+        // 4. Load Upcoming Reminders
+        const loadReminders = () => {
+            const allEvents = JSON.parse(localStorage.getItem('upcomingEvents') || '[]');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const reminders = allEvents.filter(event => {
+                const eventDate = new Date(event.date);
+                eventDate.setHours(0, 0, 0, 0);
+
+                // Calculate difference in days
+                const diffTime = eventDate - today;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                // Check distance (District or State match)
+                const isNearby =
+                    (event.district && user.district && event.district.toLowerCase() === user.district.toLowerCase()) ||
+                    (event.state && user.state && event.state.toLowerCase() === user.state.toLowerCase());
+
+                // Condition: 3-10 days away AND nearby
+                return diffDays >= 3 && diffDays <= 10 && isNearby;
+            });
+
+            setUpcomingReminders(reminders);
+            localStorage.setItem('upcomingReminders', JSON.stringify(reminders));
+        };
+
+        loadReminders();
 
         // 3. Real-time Listener (simulated via interval for localStorage polling)
         const interval = setInterval(loadRequests, 3000);
@@ -114,6 +144,42 @@ const DonorDashboard = () => {
 
                 {/* Dashboard Content */}
                 <div className="space-y-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Matching Emergency Requests</h2>
+                        <span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
+                            {matchingRequests.length} Live
+                        </span>
+                    </div>
+
+                    {/* Upcoming Reminders Section */}
+                    {upcomingReminders.length > 0 && (
+                        <div className="mb-8">
+                            <div className="bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-teal-900/30 rounded-2xl p-6">
+                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                                    <Calendar className="w-5 h-5 text-emerald-600" />
+                                    Upcoming Cleared Camps Nearby
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {upcomingReminders.map(event => (
+                                        <div key={event.id} className="bg-white dark:bg-[#0A1210] p-4 rounded-xl border border-emerald-100 dark:border-teal-900/30 shadow-sm flex flex-col">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h4 className="font-bold text-gray-900 dark:text-white line-clamp-1">{event.title}</h4>
+                                                <span className="text-xs font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full whitespace-nowrap">
+                                                    {event.date}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-1">{event.organization}</p>
+                                            <div className="mt-auto flex items-center text-xs text-gray-500 gap-1">
+                                                <MapPin className="w-3 h-3" />
+                                                {event.city}, {event.district}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex items-center gap-2 mb-4">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">Matching Emergency Requests</h2>
                         <span className="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">
