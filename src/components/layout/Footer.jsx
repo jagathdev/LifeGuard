@@ -245,11 +245,11 @@ const Footer = () => {
                             <ul className="space-y-4 text-sm text-gray-600 dark:text-emerald-100/70">
                                 <li className="flex items-start gap-3">
                                     <MapPin className="h-5 w-5 text-emerald-500 mt-0.5 shrink-0" />
-                                    <span>123 Life Street, Medical District,<br />New York, NY 10001</span>
+                                    <span>123 Life Street, Chennai - 600083 <br />Tamil Nadu,India</span>
                                 </li>
                                 <li className="flex items-center gap-3">
                                     <Phone className="h-5 w-5 text-emerald-500 shrink-0" />
-                                    <span>+1 (555) 123-4567</span>
+                                    <span>+91 9360270984</span>
                                 </li>
                                 <li className="flex items-center gap-3">
                                     <Mail className="h-5 w-5 text-emerald-500 shrink-0" />
@@ -269,16 +269,17 @@ const Footer = () => {
                         </ul>
                     </div>
                 </div>
-            </footer>
+            </footer >
 
             {/* Reusable Modal Component */}
-            <Modal
-                isOpen={!!activeModal}
+            < Modal
+                isOpen={!!activeModal
+                }
                 onClose={closeModal}
                 title={activeModal ? FOOTER_CONTENT[activeModal].title : ''}
             >
                 {activeModal && FOOTER_CONTENT[activeModal].content}
-            </Modal>
+            </Modal >
         </>
     );
 };
