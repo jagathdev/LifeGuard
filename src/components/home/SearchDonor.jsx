@@ -20,12 +20,18 @@ const SearchDonor = () => {
     const [searching, setSearching] = useState(false);
     const [results, setResults] = useState(null);
     const [errors, setErrors] = useState({});
+    const [apiError, setApiError] = useState(false);
 
     // Initial Load: Get States
     useEffect(() => {
         const loadStates = async () => {
             const data = await getStates();
-            setStates(data);
+            if (data === null) {
+                setApiError(true);
+                setStates([]);
+            } else {
+                setStates(data);
+            }
             setLoadingStates(false);
         };
         loadStates();
@@ -38,7 +44,17 @@ const SearchDonor = () => {
             setFormData(prev => ({ ...prev, district: '' })); // Reset district on state change
             const loadDistricts = async () => {
                 const data = await getDistrictsByState(formData.state);
-                setDistricts(data);
+                if (data === null) {
+                    // Start: Silent fail or recover? 
+                    // If we can't load districts for a state, it might be a partial outage or a specific state issue.
+                    // Let's set districts to empty but not full page error unless critical.
+                    // A simple alert or just empty districts might be better than blocking the whole page if they can change state.
+                    // However, for consistency with "Server Down", if the API is flaky, we might assume it's down.
+                    // Let's just keep districts empty and maybe log it.
+                    setDistricts([]);
+                } else {
+                    setDistricts(data);
+                }
                 setLoadingDistricts(false);
             };
             loadDistricts();
@@ -108,6 +124,28 @@ const SearchDonor = () => {
             setSearching(false);
         }, 1000);
     };
+
+    if (apiError) {
+        return (
+            <section className="py-24 relative z-20 min-h-screen bg-gray-50/50 dark:bg-[#050A09] flex items-center justify-center">
+                <div className="text-center p-8 bg-white dark:bg-[#0A1815] rounded-3xl shadow-2xl border border-red-100 dark:border-red-900/30 max-w-md mx-4">
+                    <div className="bg-red-50 dark:bg-red-900/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <AlertCircle className="w-10 h-10 text-red-500" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Server Down</h2>
+                    <p className="text-gray-500 dark:text-gray-400 mb-8">
+                        We are currently experiencing technical difficulties. Please try searching for donors again later.
+                    </p>
+                    <Button
+                        onClick={() => window.location.reload()}
+                        className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg shadow-red-500/20"
+                    >
+                        Retry Now
+                    </Button>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section className="py-24 relative z-20 min-h-screen bg-gray-50/50 dark:bg-[#050A09]">
@@ -240,54 +278,57 @@ const SearchDonor = () => {
 
                             {results.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {results.map((donor, idx) => (
-                                        <motion.div
-                                            key={donor.id || idx}
-                                            initial={{ opacity: 0, y: 20 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.1 }}
-                                        >
-                                            <Card className="h-full hover:shadow-2xl transition-all duration-300 dark:bg-[#0A1815] border border-gray-100 dark:border-teal-900/30 group">
-                                                <CardContent className="p-0">
-                                                    <div className="p-6">
-                                                        <div className="flex justify-between items-start mb-6">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold text-lg">
-                                                                    {donor.fullName.charAt(0)}
+                                    {results.map((donor, idx) => {
+                                        const donorName = donor.fullName || donor.name || 'Donor';
+                                        return (
+                                            <motion.div
+                                                key={donor.id || idx}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: idx * 0.1 }}
+                                            >
+                                                <Card className="h-full hover:shadow-2xl transition-all duration-300 dark:bg-[#0A1815] border border-gray-100 dark:border-teal-900/30 group">
+                                                    <CardContent className="p-0">
+                                                        <div className="p-6">
+                                                            <div className="flex justify-between items-start mb-6">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-700 dark:text-emerald-300 font-bold text-lg">
+                                                                        {donorName.charAt(0)}
+                                                                    </div>
+                                                                    <div>
+                                                                        <h4 className="font-bold text-lg text-gray-900 dark:text-white group-hover:text-emerald-500 transition-colors">{donorName}</h4>
+                                                                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">ID: #{donor.donorId || donor.id}</span>
+                                                                    </div>
                                                                 </div>
-                                                                <div>
-                                                                    <h4 className="font-bold text-lg text-gray-900 dark:text-white group-hover:text-emerald-500 transition-colors">{donor.fullName}</h4>
-                                                                    <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">ID: #{donor.donorId || donor.id}</span>
+                                                                <div className="bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg border border-red-100 dark:border-red-900/50">
+                                                                    <span className="text-red-600 dark:text-red-400 font-black text-xl">{donor.bloodGroup}</span>
                                                                 </div>
                                                             </div>
-                                                            <div className="bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg border border-red-100 dark:border-red-900/50">
-                                                                <span className="text-red-600 dark:text-red-400 font-black text-xl">{donor.bloodGroup}</span>
-                                                            </div>
-                                                        </div>
 
-                                                        <div className="space-y-3 mb-6">
-                                                            <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
-                                                                <MapPin className="w-4 h-4 text-emerald-500" />
-                                                                <span>{donor.city ? `${donor.city}, ` : ''}{donor.district}</span>
+                                                            <div className="space-y-3 mb-6">
+                                                                <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                                                                    <MapPin className="w-4 h-4 text-emerald-500" />
+                                                                    <span>{donor.city ? `${donor.city}, ` : ''}{donor.district}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                                                                    <LandPlot className="w-4 h-4 text-emerald-500" />
+                                                                    <span>{donor.state}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                                                                    <Phone className="w-4 h-4 text-emerald-500" />
+                                                                    <span>{donor.phone ? `+91 ${donor.phone}` : 'Contact Unavailable'}</span>
+                                                                </div>
                                                             </div>
-                                                            <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
-                                                                <LandPlot className="w-4 h-4 text-emerald-500" />
-                                                                <span>{donor.state}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
-                                                                <Phone className="w-4 h-4 text-emerald-500" />
-                                                                <span>{donor.phone ? `+91 ${donor.phone}` : 'Contact Unavailable'}</span>
-                                                            </div>
-                                                        </div>
 
-                                                        <Button className="w-full rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-emerald-600 dark:hover:bg-emerald-400 hover:text-white border-none shadow-lg">
-                                                            <Phone className="w-4 h-4 mr-2" /> Call Now
-                                                        </Button>
-                                                    </div>
-                                                </CardContent>
-                                            </Card>
-                                        </motion.div>
-                                    ))}
+                                                            <Button className="w-full rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-emerald-600 dark:hover:bg-emerald-400 hover:text-white border-none shadow-lg">
+                                                                <Phone className="w-4 h-4 mr-2" /> Call Now
+                                                            </Button>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </motion.div>
+                                        )
+                                    })}
                                 </div>
                             ) : (
                                 <div className="text-center py-16 bg-white dark:bg-[#0A1815] rounded-3xl border border-dashed border-gray-300 dark:border-teal-900/50">

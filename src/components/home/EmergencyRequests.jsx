@@ -68,7 +68,7 @@ const EmergencyRequests = () => {
     useEffect(() => {
         const loadStates = async () => {
             const data = await getStates();
-            setStates(data);
+            setStates(data || []);
             setLoadingStates(false);
         };
         loadStates();
@@ -80,7 +80,7 @@ const EmergencyRequests = () => {
             setLoadingDistricts(true);
             const loadDistricts = async () => {
                 const data = await getDistrictsByState(newRequest.state);
-                setDistricts(data);
+                setDistricts(data || []);
                 setLoadingDistricts(false);
             };
             loadDistricts();
@@ -169,7 +169,7 @@ const EmergencyRequests = () => {
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            className="fixed bottom-10 right-10 z-[60] bg-emerald-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 border border-emerald-500"
+                            className="fixed bottom-10 right-10 z-60 bg-emerald-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-4 border border-emerald-500"
                         >
                             <div className="bg-white/20 p-2 rounded-full">
                                 <CheckCircle2 className="w-6 h-6" />
@@ -253,7 +253,7 @@ const EmergencyRequests = () => {
             {/* Create Request Modal */}
             <AnimatePresence>
                 {isFormOpen && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}

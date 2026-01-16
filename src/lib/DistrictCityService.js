@@ -9,25 +9,26 @@ const fetchData = async () => {
     if (cachedData) return cachedData;
     try {
         const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         cachedData = data;
         return data; // Expected structure: { states: [ { state: "Name", districts: [...] }, ... ] }
     } catch (error) {
         console.error("Failed to fetch location data:", error);
-        return { states: [] };
+        return null; // Return null to indicate failure
     }
 };
 
 export const getStates = async () => {
     const data = await fetchData();
-    if (!data || !data.states) return [];
+    if (!data || !data.states) return null; // Return null on failure
     return data.states.map(s => s.state).sort();
 };
 
 export const getDistrictsByState = async (stateName) => {
     if (!stateName) return [];
     const data = await fetchData();
-    if (!data || !data.states) return [];
+    if (!data || !data.states) return null; // Return null on failure
 
     const stateObj = data.states.find(s => s.state === stateName);
     return stateObj ? stateObj.districts.sort() : [];

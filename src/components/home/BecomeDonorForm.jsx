@@ -70,7 +70,7 @@ const BecomeDonorForm = () => {
     useEffect(() => {
         const loadStates = async () => {
             const data = await getStates();
-            setStates(data);
+            setStates(data || []);
             setLoadingStates(false);
         };
         loadStates();
@@ -82,7 +82,7 @@ const BecomeDonorForm = () => {
             setLoadingDistricts(true);
             const loadDistricts = async () => {
                 const data = await getDistrictsByState(formData.state);
-                setDistricts(data);
+                setDistricts(data || []);
                 setLoadingDistricts(false);
             };
             loadDistricts();
@@ -325,7 +325,7 @@ const BecomeDonorForm = () => {
                                 className={`w-full h-14 rounded-xl font-bold text-lg shadow-xl shadow-emerald-500/20 transition-all duration-300 flex items-center justify-center gap-2
                                     ${!formData.agreeToTerms || isSubmitting
                                         ? 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white transform hover:-translate-y-1'
+                                        : 'bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white transform hover:-translate-y-1'
                                     }
                                 `}
                             >
