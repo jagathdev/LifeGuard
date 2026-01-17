@@ -1,31 +1,72 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { Menu, X, Sun, Moon, Droplet } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { useToast } from '../../context/ToastContext';
+import { Menu, X, Sun, Moon, Droplet, User, LogOut, ChevronDown, LayoutDashboard, Calendar } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import Button from '../ui/Button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../../lib/utils';
 
 const Navbar = () => {
     const { theme, toggleTheme } = useTheme();
+    const { addToast } = useToast();
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
+    const profileRef = useRef(null);
+
+    // Get logged-in donor
+    const loggedInDonor = JSON.parse(localStorage.getItem('loggedInDonor'));
 
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 20);
         };
+
+        const handleClickOutside = (event) => {
+            if (profileRef.current && !profileRef.current.contains(event.target)) {
+                setIsProfileOpen(false);
+            }
+        };
+
         window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        document.addEventListener('mousedown', handleClickOutside);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
     }, []);
 
-    const navLinks = [
+    const handleLogout = () => {
+        localStorage.removeItem('loggedInDonor');
+        setIsProfileOpen(false);
+        setIsOpen(false);
+        addToast('You have been logged out successfully.', 'success');
+        navigate('/');
+    };
+
+    // Helper to close menus on navigation
+    const closeMenus = () => {
+        setIsOpen(false);
+        setIsProfileOpen(false);
+    };
+
+    const navLinks = loggedInDonor ? [
         { name: 'Home', path: '/' },
-        { name: 'Events', path: '/events' },
         { name: 'Find Donor', path: '/search' },
-        { name: 'Become Donor', path: '/register' },
         { name: 'Emergency Requests', path: '/emergency' },
+        { name: 'Upcoming Events', path: '/events' },
+        { name: 'Donor Dashboard', path: '/donor-dashboard' },
+        { name: 'About', path: '/about' },
+    ] : [
+        { name: 'Home', path: '/' },
+        { name: 'Find Donor', path: '/search' },
+        { name: 'Become a Donor', path: '/register' },
+        { name: 'Emergency Requests', path: '/emergency' },
+        { name: 'Upcoming Events', path: '/events' },
         { name: 'About', path: '/about' },
     ];
 
@@ -64,6 +105,7 @@ const Navbar = () => {
                             <Link
                                 key={link.name}
                                 to={link.path}
+                                onClick={closeMenus}
                                 className={cn(
                                     "text-sm font-medium transition-all duration-200 hover:text-emerald-600 dark:hover:text-emerald-400 relative",
                                     isActive(link.path)
@@ -95,15 +137,96 @@ const Navbar = () => {
                                 <Moon className="h-5 w-5 text-emerald-700" />
                             )}
                         </button>
-                        <Link to="/login">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
-                            >
-                                Login
-                            </Button>
-                        </Link>
+
+                        {loggedInDonor ? (
+                            <div className="relative" ref={profileRef}>
+                                <button
+                                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                                    className="flex items-center space-x-2 p-1.5 rounded-full hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors border border-transparent hover:border-emerald-200 dark:hover:border-emerald-800"
+                                >
+                                    <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                                        <User className="w-5 h-5" />
+                                    </div>
+                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200 max-w-[100px] truncate">
+                                        {loggedInDonor.fullName}
+                                    </span>
+                                    <ChevronDown className={cn("w-4 h-4 text-gray-500 transition-transform", isProfileOpen && "rotate-180")} />
+                                </button>
+
+                                <AnimatePresence>
+                                    {isProfileOpen && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-gray-100 dark:border-gray-800 overflow-hidden z-50"
+                                        >
+                                            <div className="p-4 bg-emerald-50/50 dark:bg-emerald-900/10 border-b border-gray-100 dark:border-gray-800">
+                                                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                                    {loggedInDonor.fullName}
+                                                </p>
+                                                <div className="flex items-center mt-1 space-x-2">
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                                                        {loggedInDonor.bloodGroup}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                        Donor ID: {loggedInDonor.id}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-2">
+                                                <Link
+                                                    to="/donor-dashboard"
+                                                    onClick={closeMenus}
+                                                    className="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                                                >
+                                                    <LayoutDashboard className="w-4 h-4" />
+                                                    <span className="text-sm">Dashboard</span>
+                                                </Link>
+                                                <Link
+                                                    to="/my-donations"
+                                                    onClick={closeMenus}
+                                                    className="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                                                >
+                                                    <Droplet className="w-4 h-4" />
+                                                    <span className="text-sm">My Donations</span>
+                                                </Link>
+                                                <Link
+                                                    to="/events"
+                                                    onClick={closeMenus}
+                                                    className="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                                                >
+                                                    <Calendar className="w-4 h-4" />
+                                                    <span className="text-sm">Upcoming Events</span>
+                                                </Link>
+
+                                                <div className="h-px bg-gray-100 dark:bg-gray-800 my-1" />
+
+                                                <button
+                                                    onClick={handleLogout}
+                                                    className="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                                >
+                                                    <LogOut className="w-4 h-4" />
+                                                    <span className="text-sm">Logout</span>
+                                                </button>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        ) : (
+                            <Link to="/login">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+                                >
+                                    Login
+                                </Button>
+                            </Link>
+                        )}
                     </div>
 
                     {/* Mobile Menu Button */}
@@ -138,6 +261,22 @@ const Navbar = () => {
                         className="md:hidden mt-2 mx-4 rounded-xl overflow-hidden bg-mint-white dark:bg-deep-midnight shadow-lg border border-emerald-100 dark:border-emerald-900/50"
                     >
                         <div className="flex flex-col space-y-2 p-4">
+                            {loggedInDonor && (
+                                <div className="p-3 mb-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg flex items-center space-x-3 border border-emerald-100 dark:border-emerald-800/50">
+                                    <div className="h-10 w-10 rounded-full bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center text-emerald-700 dark:text-emerald-200">
+                                        <User className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="font-semibold text-sm text-gray-900 dark:text-white">
+                                            {loggedInDonor.fullName}
+                                        </p>
+                                        <span className="text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded">
+                                            {loggedInDonor.bloodGroup}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
                             {navLinks.map((link) => (
                                 <Link
                                     key={link.name}
@@ -153,12 +292,23 @@ const Navbar = () => {
                                     {link.name}
                                 </Link>
                             ))}
+
                             <div className="pt-2 border-t border-emerald-200 dark:border-emerald-800">
-                                <Link to="/login" onClick={() => setIsOpen(false)}>
-                                    <Button variant="ghost" className="w-full justify-start text-emerald-800 dark:text-emerald-200">
-                                        Login
-                                    </Button>
-                                </Link>
+                                {loggedInDonor ? (
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center justify-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                    >
+                                        <LogOut className="w-4 h-4" />
+                                        <span>Logout</span>
+                                    </button>
+                                ) : (
+                                    <Link to="/login" onClick={() => setIsOpen(false)}>
+                                        <Button variant="ghost" className="w-full justify-start text-emerald-800 dark:text-emerald-200">
+                                            Login
+                                        </Button>
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </motion.div>
