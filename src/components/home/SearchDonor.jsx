@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react';
-import { Search, MapPin, Droplet, User, Loader2, Calendar, Phone, CheckCircle2, AlertCircle, LandPlot } from 'lucide-react';
+import { Search, MapPin, Droplet, User, Loader2, Calendar, Phone, CheckCircle2, AlertCircle, LandPlot, Plus, X } from 'lucide-react';
 import Button from '../ui/Button';
 import { Card, CardContent } from '../ui/Card';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getStates, getDistrictsByState } from '../../lib/DistrictCityService';
 import { cn } from '../../lib/utils';
+import { externalDonors } from '../../data/externalDonors';
+import { useToast } from '../../context/ToastContext';
 
 const SearchDonor = () => {
+    const { addToast } = useToast();
+
+    // --- Search Form State ---
     const [formData, setFormData] = useState({
         bloodGroup: '',
         state: '',
-        district: ''
+        district: '',
+        city: '' // Added City
     });
 
     const [states, setStates] = useState([]);
@@ -20,136 +26,155 @@ const SearchDonor = () => {
     const [searching, setSearching] = useState(false);
     const [results, setResults] = useState(null);
     const [errors, setErrors] = useState({});
-    const [apiError, setApiError] = useState(false);
 
-    // Initial Load: Get States
+    // --- Add Donor Form State ---
+    const [showAddDonor, setShowAddDonor] = useState(false);
+    const [newDonor, setNewDonor] = useState({
+        fullName: '',
+        phone: '',
+        bloodGroup: '',
+        state: '',
+        district: '',
+        city: ''
+    });
+    const [newDonorDistricts, setNewDonorDistricts] = useState([]);
+
+    // --- Initial Load ---
     useEffect(() => {
         const loadStates = async () => {
             const data = await getStates();
-            if (data === null) {
-                setApiError(true);
-                setStates([]);
-            } else {
-                setStates(data);
-            }
+            if (data) setStates(data);
             setLoadingStates(false);
         };
         loadStates();
     }, []);
 
-    // Handle State Change -> Load Districts
-    useEffect(() => {
-        if (formData.state) {
-            setLoadingDistricts(true);
-            setFormData(prev => ({ ...prev, district: '' })); // Reset district on state change
-            const loadDistricts = async () => {
-                const data = await getDistrictsByState(formData.state);
-                if (data === null) {
-                    // Start: Silent fail or recover? 
-                    // If we can't load districts for a state, it might be a partial outage or a specific state issue.
-                    // Let's set districts to empty but not full page error unless critical.
-                    // A simple alert or just empty districts might be better than blocking the whole page if they can change state.
-                    // However, for consistency with "Server Down", if the API is flaky, we might assume it's down.
-                    // Let's just keep districts empty and maybe log it.
-                    setDistricts([]);
-                } else {
-                    setDistricts(data);
-                }
-                setLoadingDistricts(false);
-            };
-            loadDistricts();
-        } else {
-            setDistricts([]);
-            setFormData(prev => ({ ...prev, district: '' }));
-        }
-    }, [formData.state]);
-
+    // --- Handle Search Form Changes ---
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-        if (errors[name]) {
-            setErrors(prev => ({ ...prev, [name]: '' }));
+
+        // Load districts if state changes
+        if (name === 'state') {
+            if (value) {
+                setLoadingDistricts(true);
+                setFormData(prev => ({ ...prev, district: '' }));
+                getDistrictsByState(value).then(data => {
+                    setDistricts(data || []);
+                    setLoadingDistricts(false);
+                });
+            } else {
+                setDistricts([]);
+                setFormData(prev => ({ ...prev, district: '' }));
+            }
+        }
+
+        if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+    };
+
+    // --- Handle Add Donor Form Changes ---
+    const handleNewDonorChange = (e) => {
+        const { name, value } = e.target;
+        setNewDonor(prev => ({ ...prev, [name]: value }));
+
+        if (name === 'state') {
+            if (value) {
+                getDistrictsByState(value).then(data => setNewDonorDistricts(data || []));
+            } else {
+                setNewDonorDistricts([]);
+            }
         }
     };
 
-    const validate = () => {
+    const validateSearch = () => {
         const newErrors = {};
         if (!formData.bloodGroup) newErrors.bloodGroup = 'Blood Group is required';
         if (!formData.state) newErrors.state = 'State is required';
         if (!formData.district) newErrors.district = 'District is required';
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSearch = (e) => {
         e.preventDefault();
-        if (!validate()) return;
+        if (!validateSearch()) return;
 
         setSearching(true);
         setResults(null);
 
-        // Simulate Network Delay & Filtering
         setTimeout(() => {
-            const storedDonors = JSON.parse(localStorage.getItem('donors') || '[]');
+            // 1. Fetch Local Donors
+            const localDonors = JSON.parse(localStorage.getItem('donors') || '[]');
 
-            // NOTE: We do NOT use mock data anymore if we want to rely on the "Become Donor" flow.
-            // However, to ensure the user sees *something* if they haven't registered, we can keep a small fallback list
-            // that matches realistic Indian data, or just rely on them creating a donor.
-            // Let's add a few fallback-only items for demo if LocalStorage is empty.
-            let allDonors = storedDonors;
-            if (storedDonors.length === 0) {
-                allDonors = [
-                    { id: 901, fullName: 'Rahul Sharma', bloodGroup: 'O+', state: 'Delhi', district: 'New Delhi', city: 'Connaught Place', phone: '9876543210' },
-                    { id: 902, fullName: 'Priya Patel', bloodGroup: 'B+', state: 'Gujarat', district: 'Ahmedabad', city: 'Maninagar', phone: '9876543211' },
-                    // Context-aware mock: if user searches specific state, maybe show a dummy?
-                    // Better to just show empty state to encourage registration loop.
-                ];
-            }
+            // 2. Fetch External Donors (Simulated API)
+            // In a real app, this would be await fetch('/api/donors')
+            const apiDonors = externalDonors;
 
-            const matches = allDonors.filter(donor => {
-                // 1. Blood Group Match
+            // 3. Merge & Deduplicate (by phone number)
+            const allDonors = [...localDonors, ...apiDonors];
+            const uniqueDonors = Array.from(new Map(allDonors.map(item => [item.phone, item])).values());
+
+            // 4. Filter
+            const matches = uniqueDonors.filter(donor => {
+                // Blood Group Match
                 if (donor.bloodGroup !== formData.bloodGroup) return false;
 
-                // 2. State Match
+                // State Match (Case insensitive check strictly speaking, but dropdowns are uniform)
                 if (donor.state !== formData.state) return false;
 
-                // 3. District Match
+                // District Match
                 if (donor.district !== formData.district) return false;
+
+                // City Match (Optional - Case insensitive partial match)
+                if (formData.city && donor.city) {
+                    if (!donor.city.toLowerCase().includes(formData.city.toLowerCase())) {
+                        return false;
+                    }
+                }
 
                 return true;
             });
 
             setResults(matches);
             setSearching(false);
-        }, 1000);
+        }, 800);
     };
 
-    if (apiError) {
-        return (
-            <section className="py-24 relative z-20 min-h-screen bg-gray-50/50 dark:bg-[#050A09] flex items-center justify-center">
-                <div className="text-center p-8 bg-white dark:bg-[#0A1815] rounded-3xl shadow-2xl border border-red-100 dark:border-red-900/30 max-w-md mx-4">
-                    <div className="bg-red-50 dark:bg-red-900/20 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <AlertCircle className="w-10 h-10 text-red-500" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Server Down</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-8">
-                        We are currently experiencing technical difficulties. Please try searching for donors again later.
-                    </p>
-                    <Button
-                        onClick={() => window.location.reload()}
-                        className="w-full bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg shadow-red-500/20"
-                    >
-                        Retry Now
-                    </Button>
-                </div>
-            </section>
-        );
-    }
+    const handleAddDonorSubmit = (e) => {
+        e.preventDefault();
+        // Basic Validation
+        if (!newDonor.fullName || !newDonor.phone || !newDonor.bloodGroup || !newDonor.state || !newDonor.district) {
+            addToast('Please fill all required fields to add a donor.', 'error');
+            return;
+        }
+
+        // Save to LocalStorage
+        const storedDonors = JSON.parse(localStorage.getItem('donors') || '[]');
+        const newId = `local_${Date.now()}`;
+        const donorToAdd = { ...newDonor, id: newId };
+
+        storedDonors.push(donorToAdd);
+        localStorage.setItem('donors', JSON.stringify(storedDonors));
+
+        // Reset & Notify
+        addToast('Donor added successfully! You can now search for them.', 'success');
+        setNewDonor({ fullName: '', phone: '', bloodGroup: '', state: '', district: '', city: '' });
+        setShowAddDonor(false);
+
+        // Optional: If current search criteria matches new donor, refresh results?
+        // User asked to "Instantly update UI" -> Re-trigger search if criteria matches
+        if (results &&
+            newDonor.bloodGroup === formData.bloodGroup &&
+            newDonor.state === formData.state &&
+            newDonor.district === formData.district) {
+            setResults(prev => [...prev, donorToAdd]);
+        }
+    };
 
     return (
         <section className="py-24 relative z-20 min-h-screen bg-gray-50/50 dark:bg-[#050A09]">
             <div className="container mx-auto px-4 md:px-6">
+
                 <div className="text-center mb-12">
                     <motion.h2
                         initial={{ opacity: 0, y: 20 }}
@@ -163,16 +188,17 @@ const SearchDonor = () => {
                     </p>
                 </div>
 
+                {/* Search Card */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <Card className="max-w-5xl mx-auto shadow-2xl border border-gray-100 dark:border-teal-900/30 bg-white/80 dark:bg-[#0A1815]/80 backdrop-blur-xl overflow-hidden rounded-3xl">
+                    <Card className="max-w-5xl mx-auto shadow-2xl border border-gray-100 dark:border-teal-900/30 bg-white/80 dark:bg-[#0A1815]/80 backdrop-blur-xl overflow-hidden rounded-3xl z-30 relative">
                         <div className="p-1 h-2 bg-linear-to-r from-emerald-500 via-teal-500 to-emerald-500 animate-gradient"></div>
 
                         <CardContent className="p-8 md:p-10">
-                            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
                                 {/* Blood Group */}
                                 <div className="space-y-2">
@@ -185,19 +211,17 @@ const SearchDonor = () => {
                                             onChange={handleChange}
                                             className={cn(
                                                 "w-full h-12 pl-12 pr-4 rounded-xl border-2 bg-gray-50 dark:bg-[#0F1C1A] outline-none transition-all cursor-pointer appearance-none font-medium",
-                                                errors.bloodGroup
-                                                    ? "border-red-300 focus:border-red-500 text-red-900 dark:text-red-100"
-                                                    : "border-gray-100 dark:border-teal-900/30 focus:border-emerald-500 dark:focus:border-teal-500 text-gray-900 dark:text-gray-100"
+                                                errors.bloodGroup ? "border-red-300 focus:border-red-500" : "border-gray-100 dark:border-teal-900/30 focus:border-emerald-500"
                                             )}
                                         >
                                             <option value="">Select Group</option>
                                             {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
                                         </select>
                                     </div>
-                                    {errors.bloodGroup && <p className="text-xs text-red-500 ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.bloodGroup}</p>}
+                                    {errors.bloodGroup && <p className="text-xs text-red-500 ml-1">{errors.bloodGroup}</p>}
                                 </div>
 
-                                {/* State (Indian States) */}
+                                {/* State */}
                                 <div className="space-y-2">
                                     <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">State <span className="text-red-500">*</span></label>
                                     <div className="relative group">
@@ -209,19 +233,17 @@ const SearchDonor = () => {
                                             disabled={loadingStates}
                                             className={cn(
                                                 "w-full h-12 pl-12 pr-4 rounded-xl border-2 bg-gray-50 dark:bg-[#0F1C1A] outline-none transition-all cursor-pointer appearance-none font-medium disabled:opacity-50",
-                                                errors.state
-                                                    ? "border-red-300 focus:border-red-500"
-                                                    : "border-gray-100 dark:border-teal-900/30 focus:border-emerald-500 dark:focus:border-teal-500 text-gray-900 dark:text-gray-100"
+                                                errors.state ? "border-red-300 focus:border-red-500" : "border-gray-100 dark:border-teal-900/30 focus:border-emerald-500"
                                             )}
                                         >
                                             <option value="">{loadingStates ? 'Loading...' : 'Select State'}</option>
                                             {states.map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
-                                    {errors.state && <p className="text-xs text-red-500 ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.state}</p>}
+                                    {errors.state && <p className="text-xs text-red-500 ml-1">{errors.state}</p>}
                                 </div>
 
-                                {/* District (Dynamic from State) */}
+                                {/* District */}
                                 <div className="space-y-2">
                                     <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">District <span className="text-red-500">*</span></label>
                                     <div className="relative group">
@@ -233,33 +255,95 @@ const SearchDonor = () => {
                                             disabled={!formData.state || loadingDistricts}
                                             className={cn(
                                                 "w-full h-12 pl-12 pr-4 rounded-xl border-2 bg-gray-50 dark:bg-[#0F1C1A] outline-none transition-all cursor-pointer appearance-none font-medium disabled:opacity-50",
-                                                errors.district
-                                                    ? "border-red-300 focus:border-red-500"
-                                                    : "border-gray-100 dark:border-teal-900/30 focus:border-emerald-500 dark:focus:border-teal-500 text-gray-900 dark:text-gray-100"
+                                                errors.district ? "border-red-300 focus:border-red-500" : "border-gray-100 dark:border-teal-900/30 focus:border-emerald-500"
                                             )}
                                         >
                                             <option value="">{loadingDistricts ? 'Loading...' : 'Select District'}</option>
                                             {districts.map(d => <option key={d} value={d}>{d}</option>)}
                                         </select>
                                     </div>
-                                    {errors.district && <p className="text-xs text-red-500 ml-1 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> {errors.district}</p>}
+                                    {errors.district && <p className="text-xs text-red-500 ml-1">{errors.district}</p>}
                                 </div>
 
+                                {/* City (Optional) */}
+                                <div className="space-y-2">
+                                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300 ml-1">City <span className="text-xs text-gray-400 font-normal">(Optional)</span></label>
+                                    <div className="relative group">
+                                        <MapPin className="absolute left-4 top-3.5 h-5 w-5 text-gray-400 group-focus-within:text-emerald-500 transition-colors" />
+                                        <input
+                                            type="text"
+                                            name="city"
+                                            value={formData.city}
+                                            onChange={handleChange}
+                                            placeholder="Enter City / Area"
+                                            className="w-full h-12 pl-12 pr-4 rounded-xl border-2 border-gray-100 dark:border-teal-900/30 bg-gray-50 dark:bg-[#0F1C1A] outline-none focus:border-emerald-500 transition-all font-medium text-gray-900 dark:text-white placeholder:text-gray-400"
+                                        />
+                                    </div>
+                                </div>
 
+                                {/* Search Button - Spans full width on mobile, 4 columns on large */}
+                                <div className="lg:col-span-4 flex justify-center mt-4">
+                                    <Button
+                                        onClick={handleSearch}
+                                        disabled={searching}
+                                        className="h-14 px-12 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 dark:from-emerald-500 dark:to-teal-500 text-white font-bold text-lg shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all"
+                                    >
+                                        {searching ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : <Search className="w-5 h-5 mr-2" />}
+                                        {searching ? 'Finding Donors...' : 'Search Donors'}
+                                    </Button>
+                                </div>
                             </form>
-
-                            <div className="mt-10 flex justify-center">
-                                <Button
-                                    onClick={handleSearch}
-                                    disabled={searching}
-                                    className="h-14 px-12 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 dark:from-emerald-500 dark:to-teal-500 text-white font-bold text-lg shadow-xl shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:-translate-y-1 transition-all"
-                                >
-                                    {searching ? <Loader2 className="w-6 h-6 animate-spin mr-2" /> : <Search className="w-5 h-5 mr-2" />}
-                                    {searching ? 'Finding Donors...' : 'Search Donors'}
-                                </Button>
-                            </div>
                         </CardContent>
                     </Card>
+
+                    {/* Add Donor Toggle */}
+                    <div className="text-center mt-6">
+                        <button
+                            onClick={() => setShowAddDonor(!showAddDonor)}
+                            className="text-emerald-600 dark:text-emerald-400 font-medium hover:underline flex items-center justify-center gap-2 mx-auto text-sm"
+                        >
+                            {showAddDonor ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                            {showAddDonor ? 'Cancel Adding Donor' : 'Not finding anyone? Add a donor manually'}
+                        </button>
+                    </div>
+
+                    {/* Add Donor Form (Collapsible) */}
+                    <AnimatePresence>
+                        {showAddDonor && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden max-w-2xl mx-auto mt-4"
+                            >
+                                <Card className="border border-gray-100 dark:border-teal-900/30 bg-white/50 dark:bg-[#0A1815]/50 backdrop-blur-md rounded-2xl">
+                                    <CardContent className="p-6">
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Add New Donor</h3>
+                                        <form onSubmit={handleAddDonorSubmit} className="space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <input required name="fullName" value={newDonor.fullName} onChange={handleNewDonorChange} placeholder="Full Name" className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1C1A]" />
+                                                <input required name="phone" value={newDonor.phone} onChange={handleNewDonorChange} placeholder="Phone Number" className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1C1A]" />
+                                                <select required name="bloodGroup" value={newDonor.bloodGroup} onChange={handleNewDonorChange} className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1C1A]">
+                                                    <option value="">Select Blood Group</option>
+                                                    {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
+                                                </select>
+                                                <select required name="state" value={newDonor.state} onChange={handleNewDonorChange} className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1C1A]">
+                                                    <option value="">Select State</option>
+                                                    {states.map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                                <select required name="district" value={newDonor.district} onChange={handleNewDonorChange} disabled={!newDonor.state} className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1C1A]">
+                                                    <option value="">Select District</option>
+                                                    {newDonorDistricts.map(d => <option key={d} value={d}>{d}</option>)}
+                                                </select>
+                                                <input name="city" value={newDonor.city} onChange={handleNewDonorChange} placeholder="City / Area" className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0F1C1A]" />
+                                            </div>
+                                            <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">Add Donor</Button>
+                                        </form>
+                                    </CardContent>
+                                </Card>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
 
                 {/* Results Section */}
@@ -297,7 +381,7 @@ const SearchDonor = () => {
                                                                     </div>
                                                                     <div>
                                                                         <h4 className="font-bold text-lg text-gray-900 dark:text-white group-hover:text-emerald-500 transition-colors">{donorName}</h4>
-                                                                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">ID: #{donor.donorId || donor.id}</span>
+                                                                        <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 px-2 py-0.5 rounded-full">ID: #{donor.id}</span>
                                                                     </div>
                                                                 </div>
                                                                 <div className="bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-lg border border-red-100 dark:border-red-900/50">
@@ -337,7 +421,7 @@ const SearchDonor = () => {
                                     </div>
                                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Donors Found</h4>
                                     <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                                        We couldn't find any eligible donors in {formData.district} matching your criteria. Try expanding your search area or ensure you have registered as a donor.
+                                        We couldn't find any eligible donors in {formData.district} matching your criteria. Try expanding your search area or add a donor manually.
                                     </p>
                                 </div>
                             )}

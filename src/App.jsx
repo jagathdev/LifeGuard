@@ -12,6 +12,9 @@ import DonorDashboard from './pages/DonorDashboard';
 import UpcomingEvents from './pages/UpcomingEvents';
 
 
+import MyDonations from './pages/MyDonations';
+
+
 function App() {
   return (
     <ThemeProvider>
@@ -29,6 +32,7 @@ function App() {
               <Route path="events" element={<div className="pt-20"><UpcomingEvents /></div>} />
 
               <Route path="donor-dashboard" element={<DonorDashboard />} />
+              <Route path="my-donations" element={<MyDonations />} />
             </Route>
           </Routes>
         </BrowserRouter>

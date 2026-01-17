@@ -93,6 +93,11 @@ const DonorDashboard = () => {
             donorId: currentUser.id,
             requestId: request.id,
             patientName: request.patientName,
+            hospital: request.hospital,
+            location: request.location,
+            bloodGroup: request.bloodGroup,
+            contact: request.contact,
+            status: 'Completed',
             donatedAt: new Date().toISOString()
         });
         localStorage.setItem('donorHistory', JSON.stringify(history));
@@ -268,7 +273,7 @@ const DonorDashboard = () => {
             {/* Success Modal */}
             <AnimatePresence>
                 {showSuccessModal && (
-                    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-70 flex items-center justify-center p-4">
                         <motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -304,7 +309,7 @@ const DonorDashboard = () => {
                         initial={{ opacity: 0, y: 50 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 50 }}
-                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[70] bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-full shadow-xl flex items-center gap-3"
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-70 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-6 py-3 rounded-full shadow-xl flex items-center gap-3"
                     >
                         <XCircle className="w-5 h-5" />
                         <span className="font-medium">Request skipped.</span>
